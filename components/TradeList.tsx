@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { Trade } from '../types';
-import { Search, Trash2, TrendingUp, TrendingDown, Clock, Pencil, ShieldCheck, Target, Zap, BarChart2, ChevronDown, ChevronUp } from 'lucide-react';
-import TradeChart from './TradeChart';
+import { Search, Trash2, TrendingUp, TrendingDown, Clock, Pencil, Zap, BarChart2 } from 'lucide-react';
 
 interface TradeListProps {
   trades: Trade[];
@@ -12,7 +11,6 @@ interface TradeListProps {
 
 const TradeList: React.FC<TradeListProps> = ({ trades, onDelete, onEdit }) => {
   const [search, setSearch] = useState('');
-  const [expandedChartId, setExpandedChartId] = useState<string | null>(null);
 
   const filteredTrades = trades.filter(t => 
     t.symbol.toLowerCase().includes(search.toLowerCase()) ||
@@ -25,10 +23,6 @@ const TradeList: React.FC<TradeListProps> = ({ trades, onDelete, onEdit }) => {
     const reward = Math.abs(trade.takeProfit - trade.entryPrice);
     if (risk === 0) return '∞';
     return `1:${(reward / risk).toFixed(1)}`;
-  };
-
-  const toggleChart = (id: string) => {
-    setExpandedChartId(expandedChartId === id ? null : id);
   };
 
   return (
@@ -94,24 +88,11 @@ const TradeList: React.FC<TradeListProps> = ({ trades, onDelete, onEdit }) => {
                     <div className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">P&L REALIZED</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => toggleChart(trade.id)} 
-                      className={`p-3 rounded-xl transition-all ${expandedChartId === trade.id ? 'bg-accent-primary text-white' : 'text-gray-700 hover:text-accent-primary hover:bg-accent-primary/10'}`}
-                      title="Analyze Chart"
-                    >
-                      <BarChart2 size={18} />
-                    </button>
-                    <button onClick={() => onEdit(trade)} className="p-3 text-gray-700 hover:text-accent-primary hover:bg-accent-primary/10 rounded-xl transition-all"><Pencil size={18} /></button>
-                    <button onClick={() => onDelete(trade.id)} className="p-3 text-gray-700 hover:text-accent-loss hover:bg-accent-loss/10 rounded-xl transition-all"><Trash2 size={18} /></button>
+                    <button onClick={() => onEdit(trade)} className="p-3 text-gray-700 hover:text-accent-primary hover:bg-accent-primary/10 rounded-xl transition-all" title="Edit Trade"><Pencil size={18} /></button>
+                    <button onClick={() => onDelete(trade.id)} className="p-3 text-gray-700 hover:text-accent-loss hover:bg-accent-loss/10 rounded-xl transition-all" title="Delete Trade"><Trash2 size={18} /></button>
                   </div>
                 </div>
               </div>
-
-              {expandedChartId === trade.id && (
-                <div className="px-6 pb-6 animate-in slide-in-from-top-2 duration-300">
-                  <TradeChart trade={trade} />
-                </div>
-              )}
             </div>
           ))
         )}
