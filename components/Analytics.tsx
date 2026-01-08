@@ -23,13 +23,13 @@ interface AnalyticsProps {
 const Analytics: React.FC<AnalyticsProps> = ({ trades }) => {
   if (trades.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-        <div className="p-6 bg-accent-surface rounded-full border border-gray-800">
-          <AreaChart className="text-gray-600" size={48} />
+      <div className="flex flex-col items-center justify-center h-full text-center py-20">
+        <div className="p-8 bg-accent-surface rounded-full border border-accent-border mb-6">
+          <BarChart2 className="text-gray-600" size={48} />
         </div>
-        <h2 className="text-2xl font-bold">Insufficient Data</h2>
+        <h2 className="text-2xl font-bold mb-2">Insufficient Report Data</h2>
         <p className="text-gray-500 max-w-sm">
-          Log at least 5 trades to start generating advanced analytics and performance charts.
+          Execute and log at least 5 trades to unlock institutional-grade performance reporting and statistical distribution charts.
         </p>
       </div>
     );
@@ -53,7 +53,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ trades }) => {
     { name: 'Wins', value: winCount },
     { name: 'Losses', value: lossCount }
   ];
-  const COLORS = ['#00E396', '#FF4560'];
+  const COLORS = ['#10b981', '#ef4444'];
 
   // P&L by Setup
   const setups: Record<string, number> = {};
@@ -66,36 +66,54 @@ const Analytics: React.FC<AnalyticsProps> = ({ trades }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <header>
-        <h2 className="text-3xl font-bold">Performance Analytics</h2>
-        <p className="text-gray-400">Deeper insights into your trading edge.</p>
+        <h2 className="text-4xl font-black tracking-tight mb-2">Performance Reports</h2>
+        <p className="text-gray-400 font-medium">Quantifying your execution edge with precision data.</p>
       </header>
 
       {/* Equity Curve */}
-      <div className="bg-accent-surface p-6 rounded-2xl border border-gray-800">
-        <h3 className="text-xl font-bold mb-6">Equity Growth Curve</h3>
-        <div className="h-[350px] w-full">
+      <div className="bg-accent-surface p-8 rounded-3xl border border-accent-border shadow-sm">
+        <h3 className="text-xl font-black mb-8 flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-accent-primary rounded-full"></div>
+          Cumulative Equity Growth
+        </h3>
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={equityData}>
               <defs>
                 <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-              <XAxis dataKey="date" stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
+              <XAxis 
+                dataKey="date" 
+                stroke="#4b5563" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={false} 
+                tick={{ fontWeight: 600 }}
+              />
+              <YAxis 
+                stroke="#4b5563" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={false} 
+                tickFormatter={(val) => `$${val}`} 
+                tick={{ fontWeight: 600 }}
+              />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#161b22', borderColor: '#1f2937', borderRadius: '12px' }}
-                itemStyle={{ color: '#8B5CF6', fontWeight: 'bold' }}
+                contentStyle={{ backgroundColor: '#111827', border: '1px solid #1f2937', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' }}
+                itemStyle={{ color: '#6366f1', fontWeight: 'bold' }}
               />
               <Area 
                 type="monotone" 
                 dataKey="equity" 
-                stroke="#8B5CF6" 
-                strokeWidth={3}
+                stroke="#6366f1" 
+                strokeWidth={4}
                 fillOpacity={1} 
                 fill="url(#colorEquity)" 
+                animationDuration={1500}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -104,8 +122,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ trades }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Win/Loss Ratio */}
-        <div className="bg-accent-surface p-6 rounded-2xl border border-gray-800">
-          <h3 className="text-xl font-bold mb-6">Execution Consistency</h3>
+        <div className="bg-accent-surface p-8 rounded-3xl border border-accent-border shadow-sm">
+          <h3 className="text-xl font-black mb-8 flex items-center gap-2">
+            <div className="w-1.5 h-6 bg-accent-win rounded-full"></div>
+            Win/Loss Distribution
+          </h3>
           <div className="h-[300px] w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -113,49 +134,52 @@ const Analytics: React.FC<AnalyticsProps> = ({ trades }) => {
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  innerRadius={80}
+                  outerRadius={110}
+                  paddingAngle={8}
                   dataKey="value"
                 >
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#161b22', borderColor: '#1f2937', borderRadius: '12px' }}
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid #1f2937', borderRadius: '16px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex justify-center gap-8 mt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-accent-win"></div>
-              <span className="text-sm text-gray-400">Wins ({winCount})</span>
+          <div className="flex justify-center gap-10 mt-6">
+            <div className="flex flex-col items-center">
+              <span className="text-accent-win text-2xl font-black">{winCount}</span>
+              <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Wins</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-accent-loss"></div>
-              <span className="text-sm text-gray-400">Losses ({lossCount})</span>
+            <div className="flex flex-col items-center">
+              <span className="text-accent-loss text-2xl font-black">{lossCount}</span>
+              <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Losses</span>
             </div>
           </div>
         </div>
 
         {/* P&L By Strategy */}
-        <div className="bg-accent-surface p-6 rounded-2xl border border-gray-800">
-          <h3 className="text-xl font-bold mb-6">Performance by Strategy</h3>
+        <div className="bg-accent-surface p-8 rounded-3xl border border-accent-border shadow-sm">
+          <h3 className="text-xl font-black mb-8 flex items-center gap-2">
+            <div className="w-1.5 h-6 bg-purple-500 rounded-full"></div>
+            P&L by Strategy
+          </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={setupData} layout="vertical">
+              <BarChart data={setupData} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
-                <XAxis type="number" stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis dataKey="name" type="category" stroke="#4b5563" fontSize={12} width={100} tickLine={false} axisLine={false} />
+                <XAxis type="number" stroke="#4b5563" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 600 }} />
+                <YAxis dataKey="name" type="category" stroke="#f3f4f6" fontSize={11} width={100} tickLine={false} axisLine={false} tick={{ fontWeight: 600 }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#161b22', borderColor: '#1f2937', borderRadius: '12px' }}
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ backgroundColor: '#111827', border: '1px solid #1f2937', borderRadius: '16px' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                 />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={24}>
                   {setupData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.value >= 0 ? '#00E396' : '#FF4560'} />
+                    <Cell key={`cell-${index}`} fill={entry.value >= 0 ? '#10b981' : '#ef4444'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -166,5 +190,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ trades }) => {
     </div>
   );
 };
+
+import { BarChart2 } from 'lucide-react';
 
 export default Analytics;
