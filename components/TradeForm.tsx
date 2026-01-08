@@ -1,43 +1,59 @@
 
-import React, { useState } from 'react';
-import { X, Save, TrendingUp, TrendingDown, DollarSign, Target, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Save, TrendingUp, TrendingDown, DollarSign, Target, ShieldOff } from 'lucide-react';
 import { Trade, TradeType } from '../types';
 
 interface TradeFormProps {
   onClose: () => void;
   onAdd: (trade: Trade) => void;
+  onUpdate?: (trade: Trade) => void;
+  tradeToEdit?: Trade | null;
 }
 
-const TradeForm: React.FC<TradeFormProps> = ({ onClose, onAdd }) => {
+const TradeForm: React.FC<TradeFormProps> = ({ onClose, onAdd, onUpdate, tradeToEdit }) => {
+  const today = new Date().toLocaleDateString('en-CA'); 
+
   const [formData, setFormData] = useState({
     symbol: '',
     type: 'LONG' as TradeType,
     entryPrice: '',
     exitPrice: '',
     quantity: '',
-    date: new Date().toISOString().split('T')[0],
+    date: today,
     timeframe: '1H',
-    setup: '',
+    setup: 'Manual',
     notes: '',
-    riskAmount: '',
-    targetPrice: ''
+    stopLoss: '',
+    takeProfit: ''
   });
+
+  useEffect(() => {
+    if (tradeToEdit) {
+      setFormData({
+        symbol: tradeToEdit.symbol,
+        type: tradeToEdit.type,
+        entryPrice: tradeToEdit.entryPrice.toString(),
+        exitPrice: tradeToEdit.exitPrice.toString(),
+        quantity: tradeToEdit.quantity.toString(),
+        date: tradeToEdit.date,
+        timeframe: tradeToEdit.timeframe,
+        setup: tradeToEdit.setup,
+        notes: tradeToEdit.notes,
+        stopLoss: tradeToEdit.stopLoss?.toString() || '',
+        takeProfit: tradeToEdit.takeProfit?.toString() || ''
+      });
+    }
+  }, [tradeToEdit]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     const entry = parseFloat(formData.entryPrice);
     const exit = parseFloat(formData.exitPrice);
     const qty = parseFloat(formData.quantity);
-    const risk = parseFloat(formData.riskAmount) || 0;
-    const target = parseFloat(formData.targetPrice) || 0;
-    
-    const pnl = formData.type === 'LONG' 
-      ? (exit - entry) * qty 
-      : (entry - exit) * qty;
+    const pnl = formData.type === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
 
-    const newTrade: Trade = {
-      id: crypto.randomUUID(),
+    const tradeData: Trade = {
+      id: tradeToEdit ? tradeToEdit.id : crypto.randomUUID(),
       symbol: formData.symbol.toUpperCase(),
       type: formData.type,
       entryPrice: entry,
@@ -48,183 +64,67 @@ const TradeForm: React.FC<TradeFormProps> = ({ onClose, onAdd }) => {
       timeframe: formData.timeframe,
       setup: formData.setup,
       notes: formData.notes,
-      riskAmount: risk,
-      targetPrice: target
+      stopLoss: formData.stopLoss ? parseFloat(formData.stopLoss) : undefined,
+      takeProfit: formData.takeProfit ? parseFloat(formData.takeProfit) : undefined
     };
 
-    onAdd(newTrade);
+    if (tradeToEdit && onUpdate) onUpdate(tradeData);
+    else onAdd(tradeData);
   };
 
   return (
-    <div className="bg-accent-surface rounded-3xl border border-accent-border overflow-hidden shadow-2xl ring-1 ring-white/10">
-      <div className="flex items-center justify-between p-8 border-b border-accent-border bg-gray-900/50">
+    <div className="bg-accent-surface rounded-3xl border border-accent-border overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div className="flex items-center justify-between p-6 border-b border-accent-border bg-gray-900/50 sticky top-0 z-10 backdrop-blur-md">
         <div>
-          <h3 className="text-2xl font-black tracking-tight text-white">Log Execution</h3>
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Institutional Record Keeping</p>
+          <h3 className="text-xl font-black tracking-tight text-white uppercase">{tradeToEdit ? 'Edit Execution' : 'Log Execution'}</h3>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Risk Management Integrated</p>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl text-gray-500 transition-colors">
-          <X size={24} />
-        </button>
+        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl text-gray-500"><X size={20} /></button>
       </div>
-
-      <form onSubmit={handleSubmit} className="p-8 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Asset Ticker</label>
-            <div className="relative">
-               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-               <input 
-                required
-                className="w-full bg-gray-900 border border-accent-border rounded-2xl pl-12 pr-4 py-4 text-white font-bold focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all placeholder:text-gray-700"
-                placeholder="e.g. BTCUSD"
-                value={formData.symbol}
-                onChange={e => setFormData({...formData, symbol: e.target.value})}
-              />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Trade Direction</label>
-            <div className="grid grid-cols-2 gap-4">
-              <DirectionButton 
-                active={formData.type === 'LONG'} 
-                onClick={() => setFormData({...formData, type: 'LONG'})}
-                label="LONG"
-                icon={<TrendingUp size={18} />}
-                color="bg-accent-win text-black"
-              />
-              <DirectionButton 
-                active={formData.type === 'SHORT'} 
-                onClick={() => setFormData({...formData, type: 'SHORT'})}
-                label="SHORT"
-                icon={<TrendingDown size={18} />}
-                color="bg-accent-loss text-black"
-              />
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <InputGroup label="Ticker" placeholder="BTCUSDT" value={formData.symbol} onChange={(v: string) => setFormData({...formData, symbol: v})} />
+          <div className="space-y-2">
+            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Trade Direction</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setFormData({...formData, type: 'LONG'})} className={`py-3 rounded-xl font-black text-xs transition-all ${formData.type === 'LONG' ? 'bg-accent-win text-black' : 'bg-gray-900 text-gray-500 border border-accent-border'}`}>LONG</button>
+              <button type="button" onClick={() => setFormData({...formData, type: 'SHORT'})} className={`py-3 rounded-xl font-black text-xs transition-all ${formData.type === 'SHORT' ? 'bg-accent-loss text-black' : 'bg-gray-900 text-gray-500 border border-accent-border'}`}>SHORT</button>
             </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <InputGroup 
-            label="Entry Price" 
-            placeholder="0.00" 
-            value={formData.entryPrice} 
-            onChange={v => setFormData({...formData, entryPrice: v})}
-          />
-          <InputGroup 
-            label="Exit Price" 
-            placeholder="0.00" 
-            value={formData.exitPrice} 
-            onChange={v => setFormData({...formData, exitPrice: v})}
-          />
-          <InputGroup 
-            label="Position Size" 
-            placeholder="Qty" 
-            value={formData.quantity} 
-            onChange={v => setFormData({...formData, quantity: v})}
-          />
-           <InputGroup 
-            label="Risk ($)" 
-            placeholder="Optional" 
-            value={formData.riskAmount} 
-            onChange={v => setFormData({...formData, riskAmount: v})}
-            icon={<ShieldAlert size={14} className="text-gray-600" />}
-          />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <InputGroup label="Entry" type="number" value={formData.entryPrice} onChange={(v: string) => setFormData({...formData, entryPrice: v})} />
+          <InputGroup label="Exit" type="number" value={formData.exitPrice} onChange={(v: string) => setFormData({...formData, exitPrice: v})} />
+          <InputGroup label="Qty" type="number" value={formData.quantity} onChange={(v: string) => setFormData({...formData, quantity: v})} />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Entry Date</label>
-            <input 
-              type="date" required
-              className="w-full bg-gray-900 border border-accent-border rounded-2xl px-5 py-4 text-white font-medium focus:outline-none focus:ring-2 focus:ring-accent-primary"
-              value={formData.date}
-              onChange={e => setFormData({...formData, date: e.target.value})}
-            />
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Setup Strategy</label>
-            <select 
-              className="w-full bg-gray-900 border border-accent-border rounded-2xl px-5 py-4 text-white font-medium focus:outline-none focus:ring-2 focus:ring-accent-primary appearance-none cursor-pointer"
-              value={formData.setup}
-              onChange={e => setFormData({...formData, setup: e.target.value})}
-            >
-              <option value="">Manual/Discretionary</option>
-              <option value="Breakout">Breakout</option>
-              <option value="Mean Reversion">Mean Reversion</option>
-              <option value="Supply/Demand">Supply & Demand</option>
-              <option value="FVG Fill">FVG / Imbalance</option>
-              <option value="Scalp">High Frequency Scalp</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-900/40 p-5 rounded-2xl border border-accent-border/50">
+          <InputGroup label="Stop Loss (SL)" type="number" icon={<ShieldOff size={12} className="text-accent-loss" />} value={formData.stopLoss} onChange={(v: string) => setFormData({...formData, stopLoss: v})} />
+          <InputGroup label="Take Profit (TP)" type="number" icon={<Target size={12} className="text-accent-win" />} value={formData.takeProfit} onChange={(v: string) => setFormData({...formData, takeProfit: v})} />
         </div>
-
-        <div className="space-y-3">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Execution Notes</label>
-          <textarea 
-            rows={4}
-            className="w-full bg-gray-900 border border-accent-border rounded-2xl px-5 py-4 text-white font-medium focus:outline-none focus:ring-2 focus:ring-accent-primary resize-none placeholder:text-gray-700"
-            placeholder="Record psychology, mistakes, and post-trade review..."
-            value={formData.notes}
-            onChange={e => setFormData({...formData, notes: e.target.value})}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <InputGroup label="Date" type="date" value={formData.date} onChange={(v: string) => setFormData({...formData, date: v})} />
+          <InputGroup label="Setup" type="select" options={['Manual', 'Breakout', 'Mean Reversion', 'FVG Fill', 'Scalp']} value={formData.setup} onChange={(v: string) => setFormData({...formData, setup: v})} />
         </div>
-
-        <button 
-          type="submit"
-          className="w-full flex items-center justify-center gap-3 bg-white text-black py-5 rounded-2xl font-black text-lg hover:bg-gray-200 transition-all shadow-xl active:scale-95"
-        >
-          <Save size={22} />
-          Confirm Execution
-        </button>
+        <div className="space-y-2">
+          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Notes</label>
+          <textarea rows={3} className="w-full bg-gray-900 border border-accent-border rounded-xl px-4 py-3 text-white font-medium resize-none" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
+        </div>
+        <button type="submit" className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 rounded-xl font-black uppercase text-sm hover:bg-gray-200 transition-all active:scale-95 shadow-xl"><Save size={18} /> {tradeToEdit ? 'Update' : 'Log'} Trade</button>
       </form>
     </div>
   );
 };
 
-// Added explicit types for DirectionButton component props
-interface DirectionButtonProps {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  icon: React.ReactNode;
-  color: string;
-}
-
-const DirectionButton: React.FC<DirectionButtonProps> = ({ active, onClick, label, icon, color }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm transition-all ${
-      active ? color : 'bg-gray-900 text-gray-500 border border-accent-border hover:border-gray-700'
-    }`}
-  >
-    {icon}
-    {label}
-  </button>
-);
-
-// Added explicit types for InputGroup component props and marked icon as optional
-interface InputGroupProps {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
-  icon?: React.ReactNode;
-}
-
-const InputGroup: React.FC<InputGroupProps> = ({ label, placeholder, value, onChange, icon }) => (
-  <div className="space-y-3">
-    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-      {icon}
-      {label}
-    </label>
-    <input 
-      type="number" step="any" required={label !== 'Risk ($)'}
-      className="w-full bg-gray-900 border border-accent-border rounded-2xl px-5 py-4 text-white font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
-      placeholder={placeholder}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-    />
+const InputGroup = ({ label, type = 'text', placeholder, value, onChange, icon, options }: any) => (
+  <div className="space-y-2">
+    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5">{icon} {label}</label>
+    {type === 'select' ? (
+      <select className="w-full bg-gray-900 border border-accent-border rounded-xl px-4 py-3 text-white font-bold" value={value} onChange={e => onChange(e.target.value)}>
+        {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
+    ) : (
+      <input type={type} step="any" className="w-full bg-gray-900 border border-accent-border rounded-xl px-4 py-3 text-white font-mono font-bold text-sm" placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
+    )}
   </div>
 );
 

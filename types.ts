@@ -14,9 +14,9 @@ export interface Trade {
   notes: string;
   setup: string;
   timeframe: string;
+  stopLoss?: number;
+  takeProfit?: number;
   riskAmount?: number;
-  targetPrice?: number;
-  rrRatio?: number;
 }
 
 export interface TradingStats {
