@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   X,
   Settings,
-  HelpCircle
+  Trash2,
+  RefreshCcw
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import TradeList from './components/TradeList';
@@ -28,40 +29,45 @@ const App: React.FC = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Generate local date string YYYY-MM-DD
   const getLocalDate = (daysOffset: number = 0) => {
     const d = new Date();
     d.setDate(d.getDate() - daysOffset);
     return d.toISOString().split('T')[0];
   };
 
-  // Initial Sample Data
   const sampleTrades: Trade[] = [
     { id: '1', symbol: 'BTCUSDT', type: 'LONG', entryPrice: 65000, exitPrice: 67200, quantity: 0.1, pnl: 220, date: getLocalDate(0), setup: 'Breakout', timeframe: '1H', stopLoss: 64000, takeProfit: 68000, notes: 'Clean breakout of 65k level.' },
-    { id: '2', symbol: 'ETHUSDT', type: 'SHORT', entryPrice: 3500, exitPrice: 3410, quantity: 2, pnl: 180, date: getLocalDate(1), setup: 'Mean Reversion', timeframe: '15m', stopLoss: 3550, takeProfit: 3300, notes: 'Rejected at local resistance.' },
-    { id: '3', symbol: 'SOLUSDT', type: 'LONG', entryPrice: 145.5, exitPrice: 140.2, quantity: 20, pnl: -106, date: getLocalDate(2), setup: 'FVG Fill', timeframe: '4H', stopLoss: 140, takeProfit: 160, notes: 'Premature entry, stop hit.' },
-    { id: '4', symbol: 'BNBUSDT', type: 'SHORT', entryPrice: 605, exitPrice: 612, quantity: 5, pnl: -35, date: getLocalDate(3), setup: 'Scalp', timeframe: '5m', stopLoss: 612, takeProfit: 580, notes: 'Stop loss hunt before move down.' },
-    { id: '5', symbol: 'ADAUSDT', type: 'LONG', entryPrice: 0.45, exitPrice: 0.51, quantity: 3000, pnl: 180, date: getLocalDate(4), setup: 'Breakout', timeframe: '1D', stopLoss: 0.43, takeProfit: 0.55, notes: 'Daily trend continuation.' },
+    { id: '2', symbol: 'ETHUSDT', type: 'SHORT', entryPrice: 3500, exitPrice: 3410, quantity: 2, pnl: 180, date: getLocalDate(1), setup: 'Mean Reversion', timeframe: '15m', stopLoss: 3550, takeProfit: 3300, notes: 'Rejected at local resistance.' }
   ];
 
-  // Load trades from localStorage
+  // Initialize Data from LocalStorage
   useEffect(() => {
+    const isInitialized = localStorage.getItem('alpha_trader_initialized');
     const savedTrades = localStorage.getItem('alpha_trader_trades');
-    if (savedTrades && JSON.parse(savedTrades).length > 0) {
-      try {
-        setTrades(JSON.parse(savedTrades));
-      } catch (e) {
-        console.error("Failed to parse trades", e);
-        setTrades(sampleTrades);
-      }
-    } else {
+
+    if (!isInitialized) {
+      // First time usage
       setTrades(sampleTrades);
+      localStorage.setItem('alpha_trader_trades', JSON.stringify(sampleTrades));
+      localStorage.setItem('alpha_trader_initialized', 'true');
+    } else {
+      // Respect user's data (even if it's empty)
+      if (savedTrades) {
+        try {
+          setTrades(JSON.parse(savedTrades));
+        } catch (e) {
+          console.error("Storage corruption detected", e);
+        }
+      }
     }
   }, []);
 
-  // Save trades to localStorage
+  // Sync to LocalStorage on every change
   useEffect(() => {
-    localStorage.setItem('alpha_trader_trades', JSON.stringify(trades));
+    const isInitialized = localStorage.getItem('alpha_trader_initialized');
+    if (isInitialized) {
+      localStorage.setItem('alpha_trader_trades', JSON.stringify(trades));
+    }
   }, [trades]);
 
   const handleAddTrade = (newTrade: Trade) => {
@@ -86,8 +92,21 @@ const App: React.FC = () => {
   };
 
   const handleDeleteTrade = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this trade?")) {
+    if (window.confirm("Permanent deletion cannot be undone. Proceed?")) {
       setTrades(prev => prev.filter(t => t.id !== id));
+    }
+  };
+
+  const handleResetData = () => {
+    if (window.confirm("This will wipe your entire journal and restore sample data. Confirm?")) {
+      localStorage.removeItem('alpha_trader_initialized');
+      window.location.reload();
+    }
+  };
+
+  const handleClearAll = () => {
+     if (window.confirm("Warning: This will delete ALL trades permanently. Are you sure?")) {
+      setTrades([]);
     }
   };
 
@@ -112,13 +131,28 @@ const App: React.FC = () => {
             {isSidebarExpanded ? <ChevronLeft size={18} /> : <Menu size={18} />}
           </button>
         </div>
+        
         <div className="flex flex-col gap-1.5 px-4 flex-grow">
           {navigationItems.map((item) => (
             <NavButton key={item.id} active={activeTab === item.tab} onClick={() => setActiveTab(item.tab)} icon={item.icon} label={item.label} expanded={isSidebarExpanded} />
           ))}
         </div>
+
         <div className="px-4 space-y-2 pb-6 border-t border-white/5 pt-6">
-           <NavButton active={false} onClick={() => {}} icon={<Settings size={20}/>} label="Settings" expanded={isSidebarExpanded} />
+           <NavButton 
+            active={false} 
+            onClick={handleResetData} 
+            icon={<RefreshCcw size={20} className="text-orange-500" />} 
+            label="Restore Samples" 
+            expanded={isSidebarExpanded} 
+           />
+           <NavButton 
+            active={false} 
+            onClick={handleClearAll} 
+            icon={<Trash2 size={20} className="text-accent-loss" />} 
+            label="Wipe Data" 
+            expanded={isSidebarExpanded} 
+           />
            <div className="mt-4">
             <button onClick={() => setIsFormOpen(true)} className={`flex items-center justify-center gap-2 bg-white hover:bg-gray-100 transition-all text-black py-4 rounded-2xl font-black shadow-2xl active:scale-95 w-full ${!isSidebarExpanded && 'p-0 h-14 rounded-2xl'}`} title="Log Execution">
               <PlusCircle size={22} />
@@ -127,6 +161,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </nav>
+
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <div className="md:hidden flex items-center justify-between p-5 bg-accent-surface/80 backdrop-blur-md border-b border-accent-border sticky top-0 z-50">
           <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-gray-900 border border-accent-border rounded-xl text-gray-400 shadow-lg"><Menu size={22} /></button>
@@ -136,6 +171,7 @@ const App: React.FC = () => {
           </div>
           <button onClick={() => setIsFormOpen(true)} className="p-2.5 bg-accent-primary rounded-xl text-white shadow-xl shadow-accent-primary/40"><PlusCircle size={22} /></button>
         </div>
+
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-gradient-to-tr from-accent-background via-accent-background to-gray-900/10">
           <div className="max-w-[1600px] mx-auto">
             <div className="animate-in fade-in slide-in-from-bottom-3 duration-700 ease-out">
@@ -147,6 +183,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+
       {isFormOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-2xl animate-in fade-in duration-300">
           <div className="relative w-full max-w-2xl animate-in zoom-in-95 duration-200">
@@ -154,6 +191,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[120] md:hidden">
            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
@@ -171,6 +209,14 @@ const App: React.FC = () => {
                     {item.icon} {item.label}
                   </button>
                 ))}
+              </div>
+              <div className="pt-6 border-t border-white/5 space-y-4">
+                <button onClick={handleResetData} className="w-full flex items-center gap-4 p-4 text-orange-500 font-bold uppercase text-xs tracking-widest">
+                  <RefreshCcw size={18} /> Restore Samples
+                </button>
+                <button onClick={handleClearAll} className="w-full flex items-center gap-4 p-4 text-accent-loss font-bold uppercase text-xs tracking-widest">
+                  <Trash2 size={18} /> Wipe All Data
+                </button>
               </div>
            </aside>
         </div>

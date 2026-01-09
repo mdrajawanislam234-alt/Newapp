@@ -28,3 +28,9 @@ export interface TradingStats {
   avgLoss: number;
   maxDrawdown: number;
 }
+
+export interface BybitConfig {
+  apiKey: string;
+  apiSecret: string;
+  isConnected: boolean;
+}
