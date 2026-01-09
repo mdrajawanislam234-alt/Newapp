@@ -7,7 +7,7 @@ import {
   TrendingUp, 
   ChevronLeft,
   ChevronRight, 
-  Flame,
+  Flame, 
   Zap,
   BarChart3,
   Calendar as CalendarIcon,
@@ -19,7 +19,8 @@ import {
   EyeOff,
   ShieldCheck,
   Target,
-  ArrowRight
+  Edit3,
+  Check
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -46,15 +47,22 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
   const [equityTimeframe, setEquityTimeframe] = useState<Timeframe>('all');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   
-  // Bybit States
+  // Bybit & Balance States
   const [bybitConfig, setBybitConfig] = useState<BybitConfig>(() => {
     const saved = localStorage.getItem('alpha_bybit_config');
     return saved ? JSON.parse(saved) : { apiKey: '', apiSecret: '', isConnected: false };
   });
-  const [liveBalance, setLiveBalance] = useState<number | null>(null);
+  
+  const [liveBalance, setLiveBalance] = useState<number | null>(() => {
+    const saved = localStorage.getItem('alpha_manual_balance');
+    return saved ? parseFloat(saved) : null;
+  });
+  
   const [isSyncing, setIsSyncing] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [tempBalance, setTempBalance] = useState('');
 
   // General Stats
   const totalPnl = useMemo(() => trades.reduce((acc, t) => acc + t.pnl, 0), [trades]);
@@ -87,7 +95,6 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
     return { pnl, rate };
   }, [monthTrades]);
 
-  // Calculate Heatmap Intensities
   const maxDayPnl = useMemo(() => {
     const dailyTotals: Record<string, number> = {};
     monthTrades.forEach(t => { dailyTotals[t.date] = (dailyTotals[t.date] || 0) + Math.abs(t.pnl); });
@@ -138,10 +145,20 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
     try {
       const balance = await fetchBybitBalance(bybitConfig);
       setLiveBalance(balance);
+      localStorage.setItem('alpha_manual_balance', balance.toString());
     } catch (e) {
       alert("Failed to sync with Bybit. Check your API credentials.");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleManualBalanceSave = () => {
+    const val = parseFloat(tempBalance);
+    if (!isNaN(val)) {
+      setLiveBalance(val);
+      localStorage.setItem('alpha_manual_balance', val.toString());
+      setIsEditingBalance(false);
     }
   };
 
@@ -156,7 +173,6 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
   const handleDisconnect = () => {
     const newConfig = { apiKey: '', apiSecret: '', isConnected: false };
     setBybitConfig(newConfig);
-    setLiveBalance(null);
     localStorage.removeItem('alpha_bybit_config');
   };
 
@@ -175,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 overscroll-contain">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Dashboard</h1>
@@ -186,13 +202,13 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
           {bybitConfig.isConnected ? (
             <div className="flex items-center gap-2 bg-accent-win/10 px-4 py-2 rounded-xl border border-accent-win/20">
               <div className="w-2 h-2 rounded-full bg-accent-win animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-              <span className="text-[10px] font-black text-accent-win uppercase tracking-widest">Bybit Linked</span>
+              <span className="text-[10px] font-black text-accent-win uppercase tracking-widest">API Linked</span>
               <button onClick={() => setShowConfig(true)} className="ml-2 p-1 hover:text-white transition-colors text-accent-win/60"><Wallet size={14} /></button>
             </div>
           ) : (
             <button onClick={() => setShowConfig(true)} className="flex items-center gap-2 bg-gray-900 border border-white/5 px-4 py-2 rounded-xl text-gray-400 hover:text-white transition-all">
               <Link size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Link Bybit API</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Connect Bybit API</span>
             </button>
           )}
         </div>
@@ -210,12 +226,18 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
               <button onClick={() => setShowConfig(false)} className="text-gray-500 hover:text-white">✕</button>
             </div>
             <div className="space-y-4">
+              <p className="text-[10px] text-gray-400 font-medium leading-relaxed bg-white/5 p-3 rounded-xl">
+                Bybit strictly blocks direct logins from external apps for your security. Use a <strong>Read-Only API Key</strong> to sync balance automatically.
+              </p>
               <input type="text" value={bybitConfig.apiKey} onChange={(e) => setBybitConfig({...bybitConfig, apiKey: e.target.value})} className="w-full bg-gray-900 border border-white/5 rounded-xl px-4 py-3 text-sm font-mono text-white focus:border-accent-primary outline-none" placeholder="API Key" />
               <div className="relative">
                 <input type={showSecret ? "text" : "password"} value={bybitConfig.apiSecret} onChange={(e) => setBybitConfig({...bybitConfig, apiSecret: e.target.value})} className="w-full bg-gray-900 border border-white/5 rounded-xl px-4 py-3 text-sm font-mono text-white focus:border-accent-primary outline-none" placeholder="API Secret" />
                 <button onClick={() => setShowSecret(!showSecret)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">{showSecret ? <EyeOff size={16} /> : <Eye size={16} />}</button>
               </div>
-              <button onClick={handleSaveConfig} className="w-full bg-white text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 shadow-xl">Confirm Connection</button>
+              <div className="flex gap-2">
+                <button onClick={handleSaveConfig} className="flex-1 bg-white text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 shadow-xl transition-all">Link API</button>
+                {bybitConfig.isConnected && <button onClick={handleDisconnect} className="bg-accent-loss/20 text-accent-loss px-5 rounded-2xl hover:bg-accent-loss/30 transition-all"><Unlink size={18} /></button>}
+              </div>
             </div>
           </div>
         </div>
@@ -226,27 +248,53 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
         <MetricItem label="Total P&L" value={`$${totalPnl.toLocaleString()}`} color="text-white" bg="bg-accent-primary/10" icon={<TrendingUp size={14} className="text-accent-primary" />} />
         <MetricItem label="Win Rate" value={`${winRate.toFixed(1)}%`} color="text-accent-win" bg="bg-accent-win/10" icon={<Zap size={14} className="text-accent-win" />} />
         <MetricItem label="Avg R:R" value={`1:${avgRR.toFixed(1)}`} color="text-orange-400" bg="bg-orange-400/10" icon={<Flame size={14} className="text-orange-400" />} />
-        {bybitConfig.isConnected && (
-          <div className="min-w-[140px] glass-card rounded-2xl p-5 flex flex-col gap-1 border-b-2 border-accent-primary/40 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Bybit Equity</span>
+        
+        {/* Account Balance Metric (API or Manual) */}
+        <div className="min-w-[160px] glass-card rounded-2xl p-5 flex flex-col gap-1 border-b-2 border-accent-primary/40 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1">
+              {bybitConfig.isConnected ? <ShieldCheck size={10} className="text-accent-win" /> : <Edit3 size={10} className="text-gray-500" />}
+              {bybitConfig.isConnected ? 'Bybit Equity' : 'Manual Balance'}
+            </span>
+            {bybitConfig.isConnected ? (
               <button onClick={handleSyncBalance} disabled={isSyncing} className={`p-1 text-gray-500 hover:text-white ${isSyncing ? 'animate-spin' : ''}`}><RefreshCw size={12} /></button>
-            </div>
-            <div className={`text-2xl font-black tracking-tighter text-white truncate`}>
-              {liveBalance !== null ? `$${liveBalance.toLocaleString(undefined, { maximumFractionDigits: 1 })}` : '---'}
-            </div>
+            ) : (
+              <button onClick={() => { setIsEditingBalance(true); setTempBalance(liveBalance?.toString() || ''); }} className="p-1 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><Edit3 size={12} /></button>
+            )}
           </div>
-        )}
+          
+          <div className="h-8 flex items-center">
+            {isEditingBalance ? (
+              <div className="flex items-center gap-2 w-full">
+                <input 
+                  autoFocus
+                  type="number" 
+                  value={tempBalance} 
+                  onChange={(e) => setTempBalance(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualBalanceSave()}
+                  className="bg-gray-900 border border-white/10 rounded-lg px-2 py-1 text-sm font-black w-full outline-none text-white"
+                />
+                <button onClick={handleManualBalanceSave} className="p-1 bg-accent-win text-black rounded-lg"><Check size={14} /></button>
+              </div>
+            ) : (
+              <div 
+                onClick={() => !bybitConfig.isConnected && setIsEditingBalance(true)}
+                className={`text-2xl font-black tracking-tighter text-white truncate ${!bybitConfig.isConnected ? 'cursor-edit' : ''}`}
+              >
+                {liveBalance !== null ? `$${liveBalance.toLocaleString(undefined, { maximumFractionDigits: 1 })}` : 'Set Balance'}
+              </div>
+            )}
+          </div>
+          <div className="text-[7px] font-black text-gray-600 uppercase tracking-widest mt-1">Live Portfolio View</div>
+        </div>
       </div>
 
       {/* Equity Chart */}
       <div className="glass-card rounded-[2rem] p-8 border border-white/5 shadow-2xl overflow-hidden relative">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
-          <div>
-            <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Activity size={14} className="text-accent-primary" /> Equity Growth
-            </h3>
-          </div>
+          <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Activity size={14} className="text-accent-primary" /> Equity Growth
+          </h3>
           <div className="flex p-1 bg-gray-900/50 rounded-xl border border-white/5 self-start">
             {(['30d', '90d', 'all'] as Timeframe[]).map((tf) => (
               <button key={tf} onClick={() => setEquityTimeframe(tf)} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${equityTimeframe === tf ? 'bg-accent-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>{tf}</button>
@@ -268,7 +316,6 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily P&L Labels */}
         <div className="glass-card rounded-[2rem] p-6 h-fit">
           <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-8"><BarChart3 size={14} className="text-accent-primary" /> Daily P&L Labels</h3>
           <div className="h-[250px] w-full">
@@ -298,10 +345,6 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
               </div>
               <button onClick={() => setViewDate(new Date(currentYear, currentMonth + 1, 1))} className="p-2 hover:bg-white/5 rounded-lg text-gray-500"><ChevronRight size={16} /></button>
             </div>
-            <div className="px-3 py-1.5 bg-white/5 rounded-xl border border-white/5">
-              <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block mb-0.5">Win Rate</span>
-              <span className="text-[10px] font-black text-white">{monthStats.rate.toFixed(1)}%</span>
-            </div>
           </div>
 
           <div className="grid grid-cols-7 gap-1.5 text-center">
@@ -317,38 +360,24 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
               const dayPnl = dayTrades.reduce((sum, t) => sum + t.pnl, 0);
               const trdCount = dayTrades.length;
               const isSelected = selectedDay === dateStr;
-
-              // Intensity Logic
               const intensity = trdCount > 0 ? Math.max(0.15, Math.min(0.9, Math.abs(dayPnl) / maxDayPnl)) : 0;
-              const bgColor = trdCount > 0 
-                ? (dayPnl >= 0 ? `rgba(16, 185, 129, ${intensity})` : `rgba(239, 68, 68, ${intensity})`)
-                : 'transparent';
+              const bgColor = trdCount > 0 ? (dayPnl >= 0 ? `rgba(16, 185, 129, ${intensity})` : `rgba(239, 68, 68, ${intensity})`) : 'transparent';
 
               return (
                 <button 
                   key={dayNum}
                   onClick={() => setSelectedDay(isSelected ? null : dateStr)}
                   className={`relative aspect-square rounded-lg flex flex-col items-center justify-center border transition-all overflow-hidden group
-                    ${trdCount > 0 ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}
                     ${isSelected ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-black z-10 scale-105' : 'border-white/5'}`}
                   style={{ backgroundColor: bgColor }}
                 >
                   <span className={`absolute top-1 left-1.5 text-[7px] font-black transition-opacity ${trdCount > 0 ? 'opacity-90' : 'opacity-20'}`}>{dayNum}</span>
-                  {trdCount > 0 && (
-                    <div className="flex flex-col items-center justify-center px-1">
-                      <span className="text-[8px] font-black text-white drop-shadow-md truncate max-w-full">
-                        ${Math.abs(Math.round(dayPnl))}
-                      </span>
-                    </div>
-                  )}
-                  {/* Tooltip hint on hover */}
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  {trdCount > 0 && <span className="text-[8px] font-black text-white drop-shadow-md truncate px-1">${Math.abs(Math.round(dayPnl))}</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* Day Selection Details (Dynamic Panel) */}
           {selectedDay && (
             <div className="mt-4 p-4 bg-gray-900/50 rounded-2xl border border-accent-primary/20 animate-in slide-in-from-top-2 duration-300">
               <div className="flex items-center justify-between mb-3">
@@ -365,10 +394,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trades }) => {
                       <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${t.pnl >= 0 ? 'bg-accent-win/20 text-accent-win' : 'bg-accent-loss/20 text-accent-loss'}`}>{t.type}</span>
                       <span className="text-[11px] font-black text-white">{t.symbol}</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[9px] font-black text-gray-500">{t.setup}</span>
-                      <span className={`text-[11px] font-black ${t.pnl >= 0 ? 'text-accent-win' : 'text-accent-loss'}`}>{t.pnl >= 0 ? '+' : ''}${Math.round(t.pnl)}</span>
-                    </div>
+                    <span className={`text-[11px] font-black ${t.pnl >= 0 ? 'text-accent-win' : 'text-accent-loss'}`}>{t.pnl >= 0 ? '+' : ''}${Math.round(t.pnl)}</span>
                   </div>
                 ))}
               </div>

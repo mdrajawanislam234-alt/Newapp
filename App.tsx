@@ -40,29 +40,23 @@ const App: React.FC = () => {
     { id: '2', symbol: 'ETHUSDT', type: 'SHORT', entryPrice: 3500, exitPrice: 3410, quantity: 2, pnl: 180, date: getLocalDate(1), setup: 'Mean Reversion', timeframe: '15m', stopLoss: 3550, takeProfit: 3300, notes: 'Rejected at local resistance.' }
   ];
 
-  // Initialize Data from LocalStorage
   useEffect(() => {
     const isInitialized = localStorage.getItem('alpha_trader_initialized');
     const savedTrades = localStorage.getItem('alpha_trader_trades');
 
     if (!isInitialized) {
-      // First time usage
       setTrades(sampleTrades);
       localStorage.setItem('alpha_trader_trades', JSON.stringify(sampleTrades));
       localStorage.setItem('alpha_trader_initialized', 'true');
-    } else {
-      // Respect user's data (even if it's empty)
-      if (savedTrades) {
-        try {
-          setTrades(JSON.parse(savedTrades));
-        } catch (e) {
-          console.error("Storage corruption detected", e);
-        }
+    } else if (savedTrades) {
+      try {
+        setTrades(JSON.parse(savedTrades));
+      } catch (e) {
+        console.error("Storage corruption detected", e);
       }
     }
   }, []);
 
-  // Sync to LocalStorage on every change
   useEffect(() => {
     const isInitialized = localStorage.getItem('alpha_trader_initialized');
     if (isInitialized) {
@@ -118,7 +112,7 @@ const App: React.FC = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-accent-background text-gray-100 overflow-hidden font-sans">
+    <div className="flex h-screen h-[100dvh] w-full bg-accent-background text-gray-100 overflow-hidden font-sans fixed inset-0">
       <nav className={`hidden md:flex flex-col border-r border-accent-border bg-accent-surface/30 backdrop-blur-xl transition-all duration-500 ease-in-out relative z-[60] ${isSidebarExpanded ? 'w-64' : 'w-24'}`}>
         <div className="flex items-center justify-between p-7 mb-4">
           <div className={`flex items-center gap-4 overflow-hidden transition-all duration-500 ${!isSidebarExpanded ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
@@ -139,20 +133,8 @@ const App: React.FC = () => {
         </div>
 
         <div className="px-4 space-y-2 pb-6 border-t border-white/5 pt-6">
-           <NavButton 
-            active={false} 
-            onClick={handleResetData} 
-            icon={<RefreshCcw size={20} className="text-orange-500" />} 
-            label="Restore Samples" 
-            expanded={isSidebarExpanded} 
-           />
-           <NavButton 
-            active={false} 
-            onClick={handleClearAll} 
-            icon={<Trash2 size={20} className="text-accent-loss" />} 
-            label="Wipe Data" 
-            expanded={isSidebarExpanded} 
-           />
+           <NavButton active={false} onClick={handleResetData} icon={<RefreshCcw size={20} className="text-orange-500" />} label="Restore Samples" expanded={isSidebarExpanded} />
+           <NavButton active={false} onClick={handleClearAll} icon={<Trash2 size={20} className="text-accent-loss" />} label="Wipe Data" expanded={isSidebarExpanded} />
            <div className="mt-4">
             <button onClick={() => setIsFormOpen(true)} className={`flex items-center justify-center gap-2 bg-white hover:bg-gray-100 transition-all text-black py-4 rounded-2xl font-black shadow-2xl active:scale-95 w-full ${!isSidebarExpanded && 'p-0 h-14 rounded-2xl'}`} title="Log Execution">
               <PlusCircle size={22} />
@@ -172,7 +154,7 @@ const App: React.FC = () => {
           <button onClick={() => setIsFormOpen(true)} className="p-2.5 bg-accent-primary rounded-xl text-white shadow-xl shadow-accent-primary/40"><PlusCircle size={22} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-gradient-to-tr from-accent-background via-accent-background to-gray-900/10">
+        <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar p-6 md:p-10 bg-gradient-to-tr from-accent-background via-accent-background to-gray-900/10">
           <div className="max-w-[1600px] mx-auto">
             <div className="animate-in fade-in slide-in-from-bottom-3 duration-700 ease-out">
               {activeTab === 'dashboard' && <Dashboard trades={trades} />}

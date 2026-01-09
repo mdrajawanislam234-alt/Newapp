@@ -31,12 +31,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { color-scheme: dark; }
-        body {
+        html, body {
             background-color: #030712;
             color: #f3f4f6;
             margin: 0;
-            overflow-x: hidden;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            overscroll-behavior-y: none;
         }
+        
+        #root {
+            height: 100%;
+            width: 100%;
+        }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -50,6 +60,10 @@
             border: 1px solid rgba(31, 41, 55, 0.6);
         }
         
+        .overscroll-contain {
+            overscroll-behavior-y: contain;
+        }
+
         @keyframes float {
           0% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
